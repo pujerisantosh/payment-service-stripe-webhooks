@@ -1,5 +1,8 @@
 💳 Payment Service – Stripe Integration (Spring Boot)
+
+
 Overview
+
 
 This project implements a production-style payment service using Spring Boot and Stripe PaymentIntents, designed to handle real-world payment flows including asynchronous confirmation via webhooks, idempotency, and secure signature verification.
 
