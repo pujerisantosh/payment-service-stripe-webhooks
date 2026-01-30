@@ -1,181 +1,276 @@
-💳 Payment Service – Stripe Integration (Spring Boot)
+💳 Payment Service – Stripe Webhooks (Production-Grade)
+
+A production-ready Payment Service built using Spring Boot that integrates with Stripe Payment Intents and secure webhook processing.
+This service demonstrates real-world payment flows, idempotency, event-driven state transitions, and secure webhook signature verification — all essential for SDE-2 backend roles.
+
+🚀 Key Highlights
+
+✅ Stripe Payment Intent integration
+
+🔐 Secure Webhook Signature Verification
+
+♻️ Idempotent payment creation
+
+🔄 Event-driven payment state transitions
+
+🧱 Clean layered architecture
+
+🧪 Local testing using Stripe CLI
+
+🗄️ JPA + H2 (pluggable with PostgreSQL)
+
+📈 Designed for production extensibility
+
+🧠 Why This Project?
+
+Payments are stateful, asynchronous, and failure-prone.
+This project models how real payment systems are built in production, not just API demos.
+
+It covers:
+
+Async webhook delivery
+
+Duplicate event handling
+
+Secure event verification
+
+Domain-driven payment lifecycle
 
 
-Overview
 
+🏗️ High-Level Architecture
 
-This project implements a production-style payment service using Spring Boot and Stripe PaymentIntents, designed to handle real-world payment flows including asynchronous confirmation via webhooks, idempotency, and secure signature verification.
-
-The system follows clean architecture principles and is extensible to support multiple payment gateways in the future.
-
-🚀 Key Features
-
-Stripe PaymentIntent integration
-
-Secure webhook handling with Stripe signature verification
-
-Asynchronous payment status updates
-
-Idempotent payment creation
-
-Gateway abstraction layer (Stripe is one implementation)
-
-Persistent payment state management
-
-Local webhook testing using Stripe CLI
-
-H2 in-memory DB for local development (PostgreSQL-ready)
-
-🏗 High-Level Architecture
 Client
   |
+  |  REST API
   v
-Payment API (Spring Boot)
+PaymentController
   |
-  v
-Stripe API (PaymentIntent)
+PaymentProcessingService
   |
-  v
-Stripe Webhooks
+PaymentGateway (Stripe)
   |
-  v
-Webhook Controller
-  |
-  v
-Payment Processing Service
-  |
-  v
-Database
+Stripe API  ───────────▶  Stripe Webhooks
+                             |
+                             v
+                    StripeWebhookController
+                             |
+               StripeWebhookSignatureVerifier
+                             |
+                      PaymentIntentRepository
+                             |
+                           Database
 
-🧠 Design Decisions
-Why Webhooks?
 
-Stripe payments are asynchronous. A successful API call does not guarantee payment completion.
-Webhooks are treated as the source of truth for final payment status.
+📦 Tech Stack
 
-Why Idempotency?
 
-To safely handle retries and prevent duplicate payments, idempotency keys are used during payment creation.
+| Category    | Technology                        |
+| ----------- | --------------------------------- |
+| Language    | Java 17+                          |
+| Framework   | Spring Boot 3                     |
+| Payments    | Stripe Java SDK                   |
+| Persistence | Spring Data JPA                   |
+| Database    | H2 (dev), PostgreSQL (prod-ready) |
+| Webhooks    | Stripe CLI                        |
+| Build Tool  | Maven                             |
 
-Why Gateway Abstraction?
 
-The PaymentGateway interface allows:
+📁 Project Structure
 
-Easy extension to other providers (Razorpay, PayPal, etc.)
+src/main/java/dev/santosh/paymentservice
+├── controller
+│   ├── PaymentController
+│   └── StripeWebhookController
+│
+├── service
+│   ├── PaymentProcessingService
+│   ├── StripeWebhookSignatureVerifier
+│   └── PaymentStateTransitionValidator
+│
+├── gateway
+│   ├── PaymentGateway
+│   └── StripePaymentGateway
+│
+├── domain
+│   └── entity
+│       ├── PaymentIntent
+│       └── PaymentStatus
+│
+├── repository
+│   └── PaymentIntentRepository
+│
+└── PaymentServiceApplication
 
-Clean separation between business logic and external integrations
 
-🗂 Package Structure
-controller/
- ├── StripeWebhookController
- ├── PaymentController
+🔁 Payment Lifecycle
 
-service/
- ├── PaymentProcessingService
- ├── StripeWebhookSignatureVerifier
+CREATED
+  ↓
+INITIATED
+  ↓ (payment_intent.succeeded)
+SUCCESS
+  ↓
+FAILED / CANCELLED (on failure events)
 
-gateway/
- ├── PaymentGateway
- ├── StripePaymentGateway
+All state transitions are:
 
-domain/
- ├── entity/
- │    ├── PaymentIntent
- │    ├── PaymentStatus
- └── dto/
+validated
 
-repository/
- ├── PaymentIntentRepository
+idempotent
 
-⚙️ Configuration
+webhook-driven
+
+
+🔐 Webhook Security
+
+
+Stripe signs every webhook event
+
+Signature is verified using:
+
+raw request body
+
+Stripe-Signature header
+
+webhook secret
+
+Webhook.constructEvent(payload, signatureHeader, webhookSecret);
+Invalid or tampered requests are rejected immediately.
+
+
+
+♻️ Idempotency Handling
+
+Each payment request contains an idempotency key
+
+Prevents:
+
+duplicate charges
+
+webhook replays
+
+Stripe + DB enforce uniqueness
+
+
+
+
+⚙️ Getting Started (Local Setup)
+Prerequisites
+
+Java 17+
+
+Maven
+
+Stripe CLI
+
+Stripe test account
+
+1️⃣ Clone Repository
+git clone https://github.com/pujerisantosh/payment-service-stripe-webhooks.git
+cd payment-service-stripe-webhooks
+
+2️⃣ Configure Application
+
 application.properties
+
 spring.application.name=payment-service
 
-# Stripe configuration
-stripe.api.key=YOUR_STRIPE_SECRET_KEY
-stripe.webhook.secret=YOUR_WEBHOOK_SECRET
+stripe.api.key=sk_test_XXXXXXXXXXXXXXXX
+stripe.webhook.secret=whsec_XXXXXXXXXXXXXXXX
 
-# Database
 spring.datasource.url=jdbc:h2:mem:testdb
 spring.jpa.hibernate.ddl-auto=update
 
+3️⃣ Run Application
+mvn clean install
+mvn spring-boot:run
 
-⚠️ Never commit real Stripe secrets to source control.
 
-🧪 Local Testing with Stripe CLI
-1. Login to Stripe CLI
-stripe login
+Application runs at:
 
-2. Forward webhooks to local app
+http://localhost:8080
+
+🧪 Webhook Testing with Stripe CLI
+Start webhook listener
 stripe listen --forward-to http://127.0.0.1:8080/webhooks/stripe
 
-3. Trigger test events
+
+Copy the generated whsec_XXXX and update config.
+
+Trigger Events
 stripe trigger payment_intent.succeeded
 
 
-You should see:
+Expected result:
 
-Events in Stripe CLI
+HTTP 200 from webhook
 
-HTTP 200 responses from your application
+Payment status updated in DB
 
-Payment status updates in the database
+Events visible in Stripe Dashboard
 
-📊 Verification & Monitoring
+📊 Verify Results
 Stripe Dashboard
 
-Developers → Events → View webhook events
+Developers → Events
 
-Developers → Logs → Verify API requests
+Developers → Logs
 
-Payments → PaymentIntents → Confirm lifecycle
+Payments → Payment Intents
 
-Application Logs
+Local DB
 
-Webhook signature verification
+H2 Console: /h2-console
 
-Event type handling
+Inspect payment_intent table
+
+🧩 API Example
+Create Payment
+curl -X POST http://localhost:8080/payments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "usd",
+    "idempotencyKey": "order-123"
+  }'
+
+🧪 Testing Strategy (Planned)
+
+Unit tests for:
 
 Payment state transitions
 
-🔐 Security Considerations
+Webhook signature verification
 
-Stripe webhook signatures are verified using the official Stripe SDK
+Integration tests using:
 
-Secrets are externalized via configuration
+H2
 
-Invalid or tampered webhook requests are rejected
+Stripe CLI
 
-🔮 Future Enhancements
+Contract tests for webhooks
 
-Retry handling & dead-letter queue
+🚀 Production Readiness
 
-Event de-duplication using Stripe event IDs
+This project is designed to scale with:
 
-PostgreSQL integration for production
+PostgreSQL
 
-Distributed locking for concurrent webhook delivery
+Redis (idempotency + caching)
 
-Support for multiple payment gateways
+Kafka / SQS (event propagation)
 
-Metrics & alerting (Micrometer + Prometheus)
+Retry + DLQ support
 
-🎯 Why This Project Matters
-
-This project demonstrates:
-
-Real-world backend payment design
-
-Asynchronous system handling
-
-Third-party integration best practices
-
-Production-ready error handling and security
+Multi-gateway support (Razorpay, Adyen)
 
 
 
-👨‍💻 Author
 
-Santosh Pujeri Backend Developer | Payment Integration Specialist 📧 pujersantosh.backend@gmail.com
 
-📞 +91 7338110806
+👤 Author
+
+Santosh Pujeri
+Backend / Platform Engineering
+GitHub: https://github.com/pujerisantosh
