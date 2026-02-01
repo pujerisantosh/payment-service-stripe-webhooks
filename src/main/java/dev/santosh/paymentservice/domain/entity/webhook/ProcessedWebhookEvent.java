@@ -2,34 +2,33 @@ package dev.santosh.paymentservice.domain.entity.webhook;
 
 import jakarta.persistence.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "processed_webhook_events", uniqueConstraints = {@UniqueConstraint(columnNames = "eventId")})
+@Table(
+        name = "processed_webhook_events",
+        uniqueConstraints = @UniqueConstraint(columnNames = "event_id")
+)
 public class ProcessedWebhookEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "event_id", nullable = false, updatable = false)
     private String eventId;
 
-    private LocalDateTime processedAt;
-
-    protected ProcessedWebhookEvent() {
-    }
+    protected ProcessedWebhookEvent() {}
 
     public ProcessedWebhookEvent(String eventId) {
         this.eventId = eventId;
-        this.processedAt = LocalDateTime.now();
     }
-
-    public String getEventId() {
-        return eventId;
-    }
-
 }
+
+
+
+
+
 
 
 

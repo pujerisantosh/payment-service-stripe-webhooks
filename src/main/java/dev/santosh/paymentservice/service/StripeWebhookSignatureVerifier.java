@@ -9,16 +9,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class StripeWebhookSignatureVerifier {
 
-    @Value("${stripe.webhook.secret}")
-    private String webhookSecret;
+    private final String webhookSecret;
+
+    public StripeWebhookSignatureVerifier(
+            @Value("${stripe.webhook.secret}") String webhookSecret) {
+        this.webhookSecret = webhookSecret;
+    }
 
     public Event verifyAndConstructEvent(String payload, String signatureHeader) {
         try {
-            return Webhook.constructEvent(
-                    payload,
-                    signatureHeader,
-                    webhookSecret
-            );
+            return Webhook.constructEvent(payload, signatureHeader, webhookSecret);
         } catch (SignatureVerificationException e) {
             throw new IllegalArgumentException("Invalid Stripe webhook signature", e);
         }
